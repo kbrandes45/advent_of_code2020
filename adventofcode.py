@@ -422,5 +422,157 @@ def advent_day7_part2():
     bag_count = this_bag_contains("shinygold", bag_layer_one)
     print("Bag count ", bag_count)
 
+def advent_day8_part1():
+    f = open("instructions.txt", "r")
+    inst = []
+    for line in f:
+        sline = line.split(" ")
+        inst.append([sline[0], int(sline[1]), None])
 
-advent_day7_part2()
+    accumulator = 0
+    should_continue = True
+    current_index = 0
+    while should_continue:
+        instruction = inst[current_index]
+        if instruction[2] == None:
+            inst[current_index][2] = current_index
+        else:
+            #Visited this instruction before
+            should_continue = False
+            break
+
+        if instruction[0] == "nop":
+            current_index+=1
+        elif instruction[0] == "acc":
+            accumulator += instruction[1]
+            current_index+=1
+        elif instruction[0] == "jmp":
+            current_index += instruction[1]
+        else:
+            print("shouldn't hit here.")
+
+    print("accumulator value ", accumulator)
+
+
+def attempt_solve(inst, solve_try_index):
+    accumulator = 0
+    correct_finish = False
+    should_continue = True
+    current_index = 0
+    while should_continue:
+        if current_index >= len(inst):
+            # Desired end behavior for the problem is found!
+            correct_finish = True
+            break
+
+        instruction = inst[current_index]
+        if instruction[2] == solve_try_index:
+            # Only exit when it is an instruction we have visited during this
+            # round of attempting to solve the puzzle. Exit instead of looping
+            # forever.
+            should_continue = False
+            break
+        else:
+            inst[current_index][2] = solve_try_index
+
+        if instruction[0] == "nop":
+            current_index+=1
+        elif instruction[0] == "acc":
+            accumulator += instruction[1]
+            current_index+=1
+        elif instruction[0] == "jmp":
+            current_index += instruction[1]
+        else:
+            print("shouldn't hit here.")
+    return accumulator, correct_finish
+
+def advent_day8_part2():
+    f = open("instructions.txt", "r")
+    inst = []
+    for line in f:
+        sline = line.split(" ")
+        inst.append([sline[0], int(sline[1]), None])
+
+    for i in range(len(inst)):
+        orig_instruction = inst[i][0]
+        if inst[i][0] == "nop":
+            inst[i][0] = "jmp"
+        elif inst[i][0] == "jmp":
+            inst[i][0] = "nop"
+        acc, correct = attempt_solve(inst, i)
+        if correct:
+            print("accumulator value ", acc)
+            break
+        inst[i][0] = orig_instruction
+
+def mins_and_maxes(subdata):
+    lowest = float("inf")
+    lower = float("inf")
+    highest = float("-inf")
+    higher = float("-inf")
+    for dat in subdata:
+        if dat < lowest:
+            lower = lowest
+            lowest = dat
+        elif dat <= lower:
+            lower = dat
+
+        if dat > highest:
+            higher = highest
+            highest = dat
+        elif dat >= higher:
+            higher = dat
+    return lowest, lower, higher, highest
+
+def advent_day9_part1():
+    f = open("xmasdata.txt", "r")
+    current_inds = [0, 25] # first 25 items
+    data = []
+    for line in f:
+        data.append(int(line.strip()))
+
+    for i in range(25, len(data)):
+        min1, min2, max2, max1 = mins_and_maxes(data[current_inds[0]:current_inds[1]])
+        current_val = data[i]
+        smallest = min1+min2
+        largest = max2+max1
+        # print("small ", smallest, " large ", largest, " current ", current_val)
+        if current_val < smallest or current_val > largest:
+            print("Value failed: ", current_val)
+            break
+
+        current_inds[0]+=1
+        current_inds[1]+=1
+
+def find_contiguous_range(data, invalid_num):
+    current_index = 0
+    curr_sum = 0
+    for i in range(current_index, len(data)):
+        curr_sum += data[i]
+        if curr_sum == invalid_num:
+            print("found it!")
+            return [current_index, i]
+        if curr_sum > invalid_num:
+            # could be more smart and take the partial sums and subtract the 
+            # removed number, add the new ones.
+            while curr_sum > invalid_num:
+                curr_sum -= data[current_index]
+                current_index+=1
+                if curr_sum == invalid_num:
+                    print("found it now!")
+                    return [current_index, i]
+            continue
+
+
+def advent_day9_part2():
+    invalid_num = 2089807806
+    f = open("xmasdata.txt", "r")
+    data = []
+    for line in f:
+        data.append(int(line.strip()))
+
+    ranges = find_contiguous_range(data, invalid_num)
+    subdata = data[ranges[0]:ranges[1]]
+    print("encryption weakness ", min(subdata)+max(subdata))
+
+advent_day9_part2()
