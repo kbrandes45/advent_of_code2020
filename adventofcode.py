@@ -787,4 +787,118 @@ def advent_day11_part2():
             print("occupied: ", occ_count)
             break
 
-advent_day11_part2()
+def move_in_dir(ang, xy, num):
+    if ang == "east":
+        xy[0] += num
+    elif ang == "west":
+        xy[0] -= num
+    elif ang == "north":
+        xy[1] += num
+    else:
+        xy[1] -= num
+    return xy
+
+def new_ang(ang, let, num):
+    if let == "R":
+        ang = (ang + num) % 360
+    else:
+        t = (ang - num)
+        if  t < 0:
+            ang = 360 + t
+        else:
+            ang = t
+    return ang
+
+
+print(new_ang(270, "R", 180))
+print(new_ang(90, "R", 180))
+print(new_ang(90, "L", 90))
+
+def advent_day12_part1():
+    f = open("directions.txt", "r")
+    xy = [0,0]
+    ang = 90
+    mapp = {90:"east", 180 : "south", 270:"west", 0: "north"}
+    for line in f:
+        line = line.strip()
+        let = line[0]
+        num = int(line[1:])
+
+        if let == "F":
+            #continue in current direction.
+            xy = move_in_dir(mapp[ang], xy, num)
+        elif let == "N":
+            xy = move_in_dir("north", xy, num)
+        elif let == "S":
+            xy = move_in_dir("south",xy, num)
+        elif let == "E":
+            xy = move_in_dir("east", xy, num)
+        elif let == "W":
+            xy = move_in_dir("west", xy, num)
+        else:
+            # L/R directions.
+            ang = new_ang(ang, let, num)
+        print(xy)
+    print("L1 ", abs(xy[0])+abs(xy[1]))
+
+def rotate_ninety(x,y, wpx, wpy, is_left=False):
+    # no need to translate the waypoint because it is specified relative to 
+    # the ship. therefore, the ship is viewed as origin.
+    # simply rotate around (0,0)
+    if is_left: #left = (-y, x)
+        rotate_wp_x = -wpy
+        rotate_wp_y = wpx
+    else: # right = (y, -x)
+        rotate_wp_x = wpy
+        rotate_wp_y = -wpx
+    return [rotate_wp_x, rotate_wp_y]
+
+def move_in_waypoint_dir(num, xy, wp):
+    xy[0] += num*wp[0]
+    xy[1] += num*wp[1]
+    return xy
+
+def rotate_waypoint(num, let, wp, xy):
+    # 180 degress = (-x, -y) 
+    # right 90 degrees = (y, -x)
+    # left 90 degrees = (-y, x)
+    print(let, num, wp)
+    times_to_apply = int(abs(num/90))
+    print(times_to_apply)
+    for i in range(times_to_apply):
+        # apply rotation in direction
+        if let == "L":
+            wp = rotate_ninety(xy[0], xy[1], wp[0], wp[1], is_left=True)
+        else:
+            wp = rotate_ninety(xy[0], xy[1], wp[0], wp[1], is_left=False)
+        print("wp", wp)
+    return wp
+
+def advent_day12_part2():
+    f = open("directions.txt", "r")
+    xy = [0,0]
+    wp = [10, 1]
+    for line in f:
+        line = line.strip()
+        let = line[0]
+        num = int(line[1:])
+
+        if let == "F":
+            # move in direction of way point the "num" times.
+            xy = move_in_waypoint_dir(num, xy, wp)
+        elif let == "N":
+            wp = move_in_dir("north", wp, num)
+        elif let == "S":
+            wp = move_in_dir("south",wp, num)
+        elif let == "E":
+            wp = move_in_dir("east", wp, num)
+        elif let == "W":
+            wp = move_in_dir("west", wp, num)
+        else:
+            # L/R directions.
+            wp = rotate_waypoint(num, let, wp, xy)
+        print(xy, wp)
+    print("L1 ", abs(xy[0])+abs(xy[1]))
+
+
+advent_day12_part2()
