@@ -575,4 +575,216 @@ def advent_day9_part2():
     subdata = data[ranges[0]:ranges[1]]
     print("encryption weakness ", min(subdata)+max(subdata))
 
-advent_day9_part2()
+def advent_day10_part1():
+    f = open("jolts.txt","r")
+    jolts = [int(line.strip()) for line in f]
+    jolts.append(0) # this is the charging port the adapters go in.
+    jolts = sorted(jolts)
+    one_jolt_count = 0
+    three_jolt_count = 1 # My final adapter is 3 jolts higher, so start this at 1 to account for it.
+    for i in range(0, len(jolts)-1):
+        diff=jolts[i+1] - jolts[i]
+        if diff == 1:
+            one_jolt_count +=1
+        elif diff == 3:
+            three_jolt_count +=1
+    print("difference of one: ", one_jolt_count)
+    print("difference of three: ", three_jolt_count)
+    print("Found: ", one_jolt_count * three_jolt_count)
+
+
+def advent_day10_part2():
+    f = open("jolts.txt","r")
+    jolts = [int(line.strip()) for line in f]
+    jolts.append(0) # this is the charging port the adapters go in.
+    jolts = sorted(jolts)
+    final = jolts[-1]
+    ways_to_reach_i = [1] + [0] * (len(jolts)-1)
+    print(len(ways_to_reach_i))
+    for i in range(0, len(jolts)-1):
+        j = i+1
+        while j < len(jolts) and jolts[j]-jolts[i] <= 3:
+            # Able to go from index i --> index j using 0,1,2,3 jolts
+            # Therefore all the ways to reach i are also ways to reach j
+            ways_to_reach_i[j] += ways_to_reach_i[i]
+            j += 1
+
+    print("Found: ", ways_to_reach_i[-1])
+
+def empty(i, j, seats):
+    return seats[i][j] =="L" or seats[i][j] == "."
+
+def check_seats(i, j, rows, cols, seats):
+    seat_count = 0
+    possible_seats = 0
+    if i-1 >=0:
+        possible_seats += 1
+        if empty(i-1, j, seats):
+            seat_count+=1
+        if j-1 >=0:
+            possible_seats += 1
+            if empty(i-1, j-1, seats):
+                seat_count+=1
+        if j+1 < cols:
+            possible_seats += 1
+            if empty(i-1, j+1, seats):
+                seat_count+=1
+    if i+1 <rows:
+        possible_seats += 1
+        if empty(i+1, j, seats):
+            seat_count+=1
+        if j-1 >=0:
+            possible_seats += 1
+            if empty(i+1, j-1, seats):
+                seat_count+=1
+        if j+1 < cols:
+            possible_seats += 1
+            if empty(i+1, j+1, seats):
+                seat_count+=1
+    if j-1 >=0:
+        possible_seats += 1
+        if empty(i, j-1, seats):
+            seat_count+=1
+    if j+1 < cols:
+        possible_seats += 1
+        if empty(i, j+1, seats):
+            seat_count+=1
+    return seat_count, possible_seats
+
+def advent_day11_part1():
+    f=open("seatchart.txt", "r")
+    seats=[]
+    for line in f:
+        line = line.strip()
+        row = []
+        for char in line:
+            row.append(char)
+        seats.append(row)
+
+    rows = len(seats)
+    cols = len(seats[0])
+    while True:
+        updated_seats = [[0 for i in range(cols)] for i in range(rows)]
+        print(len(updated_seats), len(seats), len(updated_seats[0]), len(seats[0]))
+        seat_changed = False
+        occ_count = 0
+        for i in range(0, rows):
+            for j in range(0, cols):
+                updated_seats[i][j] = seats[i][j]
+                if seats[i][j] == ".":
+                    continue
+                empty_count, possible_seats = check_seats(i,j, rows, cols, seats)
+                occupied_count = possible_seats - empty_count
+                if seats[i][j] == "L" and empty_count == possible_seats:
+                    updated_seats[i][j] = "#"
+                    seat_changed = True
+                elif seats[i][j] == "#" and occupied_count >= 4:
+                    updated_seats[i][j] = "L"
+                    seat_changed = True
+                if updated_seats[i][j] == "#":
+                    occ_count+=1
+        seats = updated_seats
+        if not seat_changed:
+            print("occupied: ", occ_count)
+            break
+
+def check_direction(start_i, start_j, inc_i, inc_j, rows, cols, seats):
+    should_continue = True
+    while should_continue:
+        new_i= start_i + inc_i 
+        new_j = start_j + inc_j
+        if new_i >= 0 and new_i < rows and new_j >= 0 and new_j < cols:
+            if seats[new_i][new_j] == ".":
+                start_i = new_i
+                start_j = new_j
+                continue
+            elif seats[new_i][new_j] == "#":
+                return False
+            else:
+                return True
+        else:
+            return None
+
+def check_all_directions(i, j, rows, cols, seats):
+    empty_count = 0
+    possible_seats = 0
+    up = check_direction(i,j,+1, 0, rows, cols, seats)
+    if up is not None:
+        possible_seats += 1
+    if up:
+        empty_count += 1
+    down = check_direction(i,j,-1, 0, rows, cols, seats)
+    if down is not None:
+        possible_seats += 1
+    if down:
+        empty_count += 1
+    left = check_direction(i,j,0,-1, rows, cols, seats)
+    if left is not None:
+        possible_seats += 1
+    if left:
+        empty_count += 1
+    right = check_direction(i,j,0,+1, rows, cols, seats)
+    if right is not None:
+        possible_seats += 1
+    if right:
+        empty_count += 1
+    d1 = check_direction(i,j,-1,+1, rows, cols, seats)
+    if d1 is not None:
+        possible_seats += 1
+    if d1:
+        empty_count += 1
+    d2 = check_direction(i,j,+1,+1, rows, cols, seats)
+    if d2 is not None:
+        possible_seats += 1
+    if d2:
+        empty_count += 1
+    d3 = check_direction(i,j,+1,-1, rows, cols, seats)
+    if d3 is not None:
+        possible_seats += 1
+    if d3:
+        empty_count += 1
+    d4 = check_direction(i,j,-1,-1, rows, cols, seats)
+    if d4 is not None:
+        possible_seats += 1
+    if d4:
+        empty_count += 1
+    return  empty_count, possible_seats
+
+def advent_day11_part2():
+    f=open("seatchart.txt", "r")
+    seats=[]
+    for line in f:
+        line = line.strip()
+        row = []
+        for char in line:
+            row.append(char)
+        seats.append(row)
+
+    rows = len(seats)
+    cols = len(seats[0])
+    while True:
+        updated_seats = [[0 for i in range(cols)] for i in range(rows)]
+        print(len(updated_seats), len(seats), len(updated_seats[0]), len(seats[0]))
+        seat_changed = False
+        occ_count = 0
+        for i in range(0, rows):
+            for j in range(0, cols):
+                updated_seats[i][j] = seats[i][j]
+                if seats[i][j] == ".":
+                    continue
+                empty_count, possible_seats = check_all_directions(i,j, rows, cols, seats)
+                occupied_count = possible_seats - empty_count
+                if seats[i][j] == "L" and empty_count == possible_seats:
+                    updated_seats[i][j] = "#"
+                    seat_changed = True
+                elif seats[i][j] == "#" and occupied_count >= 5:
+                    updated_seats[i][j] = "L"
+                    seat_changed = True
+                if updated_seats[i][j] == "#":
+                    occ_count+=1
+        seats = updated_seats
+        if not seat_changed:
+            print("occupied: ", occ_count)
+            break
+
+advent_day11_part2()
