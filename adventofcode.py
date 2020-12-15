@@ -1061,7 +1061,7 @@ def advent_day14_part2():
             address = int(line.split("]")[0][4:])
             val = line.split(" ")[-1]
             val_at_address = int(val)
-            
+
             num = bin(int(address))[2:] # remove "0b" added when converted to bytes
             num_list = list(num)
             for i in range(36-len(num_list)):
@@ -1099,5 +1099,32 @@ def advent_day14_part2():
         summ += addresses[a]
     print("Sum: ", summ)
 
+def spoken_word_game(end_number):
+    base_nums = [0,3,1,6,7,5]
+    tracking = {} # number to index last spoken at
+    last_spoken_number = 0
+    for i in range(1, end_number+2): # want the 2020th number
+        if i - 1 < len(base_nums):
+            tracking[base_nums[i-1]] = i
+            last_spoken_number = base_nums[i-1]
+        elif i == end_number+1:
+            print("for ", end_number," spoke ", last_spoken_number)
+        else:
+            if last_spoken_number in tracking:
+                # spoken at i-1 index.
+                # new number = new_index - old_index
+                new_num = i-1 - tracking[last_spoken_number]
+                tracking[last_spoken_number] = i - 1
+                last_spoken_number = new_num
+            else:
+                # a new number gets 0. put the new number in the dict.
+                tracking[last_spoken_number] = i - 1
+                last_spoken_number = 0
 
-advent_day14_part2()
+def advent_day15_part1():
+    spoken_word_game(2020)
+
+def advent_day15_part2():
+    spoken_word_game(30000000)
+
+advent_day15_part2()
