@@ -810,9 +810,9 @@ def new_ang(ang, let, num):
     return ang
 
 
-print(new_ang(270, "R", 180))
-print(new_ang(90, "R", 180))
-print(new_ang(90, "L", 90))
+# print(new_ang(270, "R", 180))
+# print(new_ang(90, "R", 180))
+# print(new_ang(90, "L", 90))
 
 def advent_day12_part1():
     f = open("directions.txt", "r")
@@ -901,4 +901,203 @@ def advent_day12_part2():
     print("L1 ", abs(xy[0])+abs(xy[1]))
 
 
-advent_day12_part2()
+def advent_day13_part1():
+    file = open("buses.txt","r")
+    f = []
+    for line in file:
+        f.append(line)
+    depart_time = int(f[0])
+    buses = (f[1].strip()).split(",")
+    earliest_id = None
+    smallest_wait = float("inf")
+    for bus in buses:
+        if bus == "x":
+            continue
+        minutes_after = depart_time % int(bus)
+        minutes_to_wait = int(bus) - minutes_after
+        if minutes_to_wait < smallest_wait:
+            smallest_wait = minutes_to_wait
+            earliest_id = int(bus)
+    print(smallest_wait * earliest_id)
+
+# Returns modulo inverse of a with 
+# respect to m using extended 
+# Euclid Algorithm. Refer below  
+# post for details: 
+# https://www.geeksforgeeks.org/multiplicative-inverse-under-modulo-m/ 
+def inv(a, m) :       
+    m0 = m 
+    x0 = 0
+    x1 = 1
+  
+    if (m == 1) : 
+        return 0
+  
+    # Apply extended Euclid Algorithm 
+    while (a > 1) : 
+        # q is quotient 
+        q = a // m 
+        t = m 
+  
+        # m is remainder now, process  
+        # same as euclid's algo 
+        m = a % m 
+        a = t 
+  
+        t = x0 
+        x0 = x1 - q * x0 
+
+        x1 = t 
+      
+    # Make x1 positive 
+    if (x1 < 0) : 
+        x1 = x1 + m0 
+    return x1 
+
+def advent_day13_part2():
+    file = open("buses.txt","r")
+    f = []
+    for line in file:
+        f.append(line)
+    buses = (f[1].strip()).split(",")
+    bus_nums = []
+    bus_ids_product = 1
+    for ind,bus in enumerate(buses):
+        if bus == "x":
+            continue
+        bus_nums.append((int(bus), ind))
+        bus_ids_product = bus_ids_product * int(bus)
+    # first bus must be departing at 0, so can divide by each bus
+    # BRUTE FORCE SOLUTION: (too slow)
+    # i = 1
+    # while True: 
+    #     depart_time = bus_ids_product - i*bus_nums[0][0]
+    #     # depart_time = i*bus_nums[0][0]
+    #     failed = False
+    #     for bus in bus_nums:
+    #         minutes_after = (depart_time + bus[1]) % int(bus[0])
+    #         if minutes_after != 0:
+    #             failed = True
+    #             break
+    #     if not failed:
+    #         print("Departs at ", depart_time)
+    #         break
+    #     i += 1
+
+    # not brute force:
+    # pre-req: all bus id pairs must have gcd = 1
+    # Chinese remainder theorem solving: x(depature) = rem (bus index) % num (bus id)
+    # Solving based on: https://www.youtube.com/watch?v=ru7mWZJlRQg
+    # for each number, first get its placeholder which has everything else multiplied
+    # then check the mod of that number, which should be mod of that number to equal the bus index.
+    t = np.array([1 for i in range(len(bus_nums))], dtype='int64')
+    for i, bus in enumerate(bus_nums):
+        orig = t[i]
+        t = bus[0] * t
+        t[i] = orig
+    for ind, (bus_id, bus_index) in enumerate(bus_nums):
+        val = np.sum(t) % bus_id
+        # we want val = np.sum(t) % bus_id --> val % bus_id where val == bus index.
+        if val == bus_index:
+            # then we're good! 
+            continue
+        else:
+            # else: need to get the mod to match the bus_index
+            # e.g. go from x = val % dep_time to n*x = bus_index % bus_id 
+            # n = (bus_id % dep_time) / (val % dep_time)
+            i = inv(val, bus_id)
+            t[ind] = t[ind] * bus_index * i
+            # checks that the multiplier actually did what we wanted:
+            # both of these should return values == bus_index
+            print(t[ind] % bus_id)
+            print(np.sum(t) % bus_id)
+
+    summed = np.sum(t)
+    # Now get the smallest valid version of "x" by taking the mod of the product of all
+    # the departure times==bus id.
+    print("Depature time: ",bus_ids_product - summed % bus_ids_product)
+
+def advent_day14_part1():
+    f=open("masks.txt","r")
+    mask = ""
+    addresses = {}
+    for line in f:
+        line = line.strip()
+        if "mask" in line:
+            mask = list(line.split("mask = ")[-1])
+        else:
+            # mem address: get everything before "]", then cut out "mem["
+            address = int(line.split("]")[0][4:])
+            num = line.split(" ")[-1]
+            num = bin(int(num))[2:] # remove "0b" added when converted to bytes
+            num_list = list(num)
+            for i in range(36-len(num_list)):
+                num_list.insert(0, 0) # pad with zeros to make 36 bits
+            #apply mask to bits
+            for i, val in enumerate(mask):
+                if val == "X":
+                    continue
+                num_list[i] = int(val)
+            # convert back to base 10
+            bin_num = "".join([str(n) for n in num_list])
+            base_ten_num = int(bin_num, 2) # converts from base 2 to base 10
+            print("address", address, " num ", base_ten_num)
+            addresses[address]=base_ten_num
+    summ = 0
+    for a in addresses:
+        summ += addresses[a]
+    print("Sum: ", summ)
+
+def advent_day14_part2():
+    f=open("masks.txt","r")
+    mask = ""
+    addresses = {}
+    for line in f:
+        line = line.strip()
+        if "mask" in line:
+            mask = list(line.split("mask = ")[-1])
+        else:
+            # mem address: get everything before "]", then cut out "mem["
+            address = int(line.split("]")[0][4:])
+            val = line.split(" ")[-1]
+            val_at_address = int(val)
+            
+            num = bin(int(address))[2:] # remove "0b" added when converted to bytes
+            num_list = list(num)
+            for i in range(36-len(num_list)):
+                num_list.insert(0, 0) # pad with zeros to make 36 bits
+            #apply mask to the memory address ("Memory address decoder")
+            for i, val in enumerate(mask):
+                if val == "0":
+                    continue
+                elif val == "1":
+                    num_list[i] = 1
+                elif val == "X":
+                    # floating bit, so try both permutations of it.
+                    num_list[i] = (0,1)
+
+            current_endings = [""]
+            for i in range(len(num_list)):
+                consider_i = len(num_list) - i - 1
+                n = num_list[consider_i]
+                if type(n) == tuple:
+                    # permutation, need to track both strings
+                    new_endings = []
+                    for ending in current_endings:
+                        new_endings.append("0"+ending)
+                        new_endings.append("1"+ending)
+                    current_endings = new_endings
+                else:
+                    for i in range(len(current_endings)):
+                        current_endings[i] = str(n)+current_endings[i]
+            for num in current_endings:
+                # convert back to base 10
+                base_ten_num = int(num, 2) # converts from base 2 to base 10
+                addresses[base_ten_num] = val_at_address
+    summ = 0
+    for a in addresses:
+        summ += addresses[a]
+    print("Sum: ", summ)
+
+
+advent_day14_part2()
