@@ -1108,7 +1108,7 @@ def spoken_word_game(end_number):
             tracking[base_nums[i-1]] = i
             last_spoken_number = base_nums[i-1]
         elif i == end_number+1:
-            print("for ", end_number," spoke ", last_spoken_number)
+            print("For ", end_number," spoke ", last_spoken_number)
         else:
             if last_spoken_number in tracking:
                 # spoken at i-1 index.
@@ -1127,4 +1127,203 @@ def advent_day15_part1():
 def advent_day15_part2():
     spoken_word_game(30000000)
 
-advent_day15_part2()
+def check_ticket(ticket, codes, summ):
+    for t in ticket:
+        valid_count = 0
+        for k in codes:
+            if ((t >= codes[k][0][0] and t <= codes[k][0][1]) or 
+                (t >= codes[k][1][0] and t <= codes[k][1][1])):
+                valid_count+=1
+        if valid_count == 0:
+            summ += t
+    return summ
+
+def advent_day16_part1():
+    f=open("tickets.txt","r")
+    codes = {}
+    my_ticket = []
+    other_tickets = []
+    invalid_vals_count = 0
+    ticket_local = 0
+    for line in f:
+        line = line.strip()
+        if "your ticket" in line:
+            ticket_local = 1
+            continue
+        elif "nearby ticket" in line:
+            ticket_local = 2
+            continue
+        elif line == "":
+            continue
+        elif ticket_local == 0:
+            #populating values+ranges.
+            vals = line.split(": ")
+            key = vals[0]
+            range_strs = vals[1].split(" or ")
+            ranges = []
+            for r_str in range_strs:
+                minmax = r_str.split("-")
+                ranges.append((int(minmax[0]), int(minmax[1])))
+            codes[key] = ranges
+        elif ticket_local == 1:
+            # my ticket
+            vals = line.split(",")
+            my_ticket = [int(v) for v in vals]
+            invalid_vals_count = check_ticket(my_ticket, codes, invalid_vals_count)
+        elif ticket_local == 2:
+            vals = line.split(",")
+            ticket = [int(v) for v in vals]
+            invalid_vals_count = check_ticket(ticket, codes, invalid_vals_count)
+    print("invalid count: ", invalid_vals_count)
+
+def is_ticket_valid(ticket, codes):
+    for t in ticket:
+        valid_count = 0
+        for k in codes:
+            if ((t >= codes[k][0][0] and t <= codes[k][0][1]) or 
+                (t >= codes[k][1][0] and t <= codes[k][1][1])):
+                valid_count+=1
+        if valid_count == 0:
+            return False
+    return True
+
+def get_set_of_good_values(ticket_val, codes):
+    good = set()
+    for code in codes:
+        ranger = codes[code]
+        if ((ticket_val >= ranger[0][0] and ticket_val <= ranger[0][1]) or 
+            (ticket_val >= ranger[1][0] and ticket_val <= ranger[1][1])):
+            # valid for this index!
+            good.add(code)
+    return good
+
+def get_smallest_set(legal_codes_per_index, used_indices):
+    current_min = float("inf")
+    current_ind = -1
+    for i in legal_codes_per_index:
+        if i in used_indices:
+            continue
+        if len(legal_codes_per_index[i]) < current_min and len(legal_codes_per_index[i]) != 0:
+            current_min = len(legal_codes_per_index[i])
+            current_ind = i
+    return current_ind
+
+def greedy_matching_algo(legal_codes_per_index):
+    matches = {}
+    # set current index as the one with least amount of codes
+    current_ind = get_smallest_set(legal_codes_per_index, matches.keys())
+    while len(matches) != len(legal_codes_per_index):
+        if len(legal_codes_per_index[current_ind]) > 0:
+            # remove this code everywhere else once setting it as the value
+            code = legal_codes_per_index[current_ind].pop()
+            matches[current_ind] = code
+            for i in legal_codes_per_index:
+                try:
+                    legal_codes_per_index[i].remove(code)
+                except Exception:
+                    pass
+            current_ind = get_smallest_set(legal_codes_per_index, matches.keys())
+    print(matches)
+    return matches
+
+def advent_day16_part2():
+    f=open("tickets.txt","r")
+    codes = {}
+    my_ticket = []
+    other_tickets = []
+    ticket_local = 0
+    for line in f:
+        line = line.strip()
+        if "your ticket" in line:
+            ticket_local = 1
+            continue
+        elif "nearby ticket" in line:
+            ticket_local = 2
+            continue
+        elif line == "":
+            continue
+        elif ticket_local == 0:
+            #populating values+ranges.
+            vals = line.split(": ")
+            key = vals[0]
+            range_strs = vals[1].split(" or ")
+            ranges = []
+            for r_str in range_strs:
+                minmax = r_str.split("-")
+                ranges.append((int(minmax[0]), int(minmax[1])))
+            codes[key] = ranges
+        elif ticket_local == 1:
+            # my ticket
+            vals = line.split(",")
+            my_ticket = [int(v) for v in vals]
+        elif ticket_local == 2:
+            vals = line.split(",")
+            ticket = [int(v) for v in vals]
+            valid = is_ticket_valid(ticket, codes)
+            if valid:
+                # valid ticket.
+                other_tickets.append(ticket)
+
+    # "failed code" means: for each index, the code failed for one or more ticket
+    # values (my ticket and other tickets).
+
+    # Determine determine codes that work for each index of MY ticket. Any other codes are 
+    # irrelevant and will be removed from the main dictionary of codes.
+    exile_codes = set()
+    for code in codes:
+        ranger = codes[code]
+        failed = 0
+        for ticket_val in my_ticket:
+            if not ((ticket_val >= ranger[0][0] and ticket_val <= ranger[0][1]) or 
+                (ticket_val >= ranger[1][0] and ticket_val <= ranger[1][1])):
+                failed+=1
+        if failed == len(my_ticket):
+            exile_codes.add(code)
+    for code in exile_codes:
+        codes.remove(code)
+
+    # Per index of my ticket, determine which codes work for that index specifically.
+    # create sets of valid codes for each index.
+    my_ticket_good_codes = []
+    for ticket_val in my_ticket:
+        good = get_set_of_good_values(ticket_val, codes)
+        my_ticket_good_codes.append(good)
+
+    # now for each set of good codes for an index, check every other ticket and slowly prune 
+    # down that list of good codes. If a code fails for one ticket, it can no longer be considered
+    # as a good code for that index.
+    legal_codes_per_index = {}
+    for ind, legal_codes in enumerate(my_ticket_good_codes):
+        for ticket in other_tickets:
+            ticket_val = ticket[ind]
+            still_works = set()
+            for code in legal_codes:
+                ranger = codes[code]
+                if ((ticket_val >= ranger[0][0] and ticket_val <= ranger[0][1]) or 
+                    (ticket_val >= ranger[1][0] and ticket_val <= ranger[1][1])):
+                    # valid for this index!
+                    still_works.add(code)
+            legal_codes = still_works.intersection(legal_codes)
+            if len(legal_codes) == 0:
+                # this should never happen unless an invalid ticket is included in the mix.
+                print("AHHHHHHHHHHHHH")
+                print("Tickt: ", ticket)
+                print("Index: ", ind)
+                print("Still works ", len(still_works), " and ", len(legal_codes))
+                print("after intersection", len(temp))
+        legal_codes_per_index[ind] = legal_codes
+
+    # Determine which code matches which index using a greedy algorithm that 
+    # tries to set codes with indices when there are no other or very few choices.
+    matches = greedy_matching_algo(legal_codes_per_index)
+
+    # get the product of all of my ticket's values where the index has a code with the word
+    # departure in it.
+    pdt = 1
+    for ind in matches:
+        code = matches[ind]
+        if "departure" in code:
+            pdt = pdt * my_ticket[ind]
+    print("Final product: ", pdt)
+
+advent_day16_part2()
